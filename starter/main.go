@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"idempotence/inventory"
+	"idempotence/workflows"
 	"log"
 	"os"
-	"context"
-	"go.temporal.io/sdk/client"
+
 	"github.com/joho/godotenv"
-	"idempotence/workflows"
+	"go.temporal.io/sdk/client"
 )
 
+// main is the entry point of the program.
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -16,7 +20,7 @@ func main() {
 	}
 
 	clientOptions := client.Options{
-		HostPort: os.Getenv("TEMPORAL_HOST"),
+		HostPort:  os.Getenv("TEMPORAL_HOST"),
 		Namespace: os.Getenv("TEMPORAL_NAMESPACE"),
 	}
 
@@ -25,24 +29,40 @@ func main() {
 		log.Fatalln("Unable to create Temporal client", err)
 	}
 	defer temporalClient.Close()
-	
+
 	workflowOptions := client.StartWorkflowOptions{
-		ID: "inventory-task",
-		TaskQueue:  os.Getenv("TASKQUEUE"),
+		ID:        "inventory-task-8",
+		TaskQueue: os.Getenv("TASKQUEUE"),
 	}
 
-	workflowExec, err := temporalClient.ExecuteWorkflow(context.Background(), workflowOptions, workflows.InventoryWorkflow)
+	// Set values
+	order := inventory.Order{
+		OrderID:  "A12",
+		Item:     "123456",
+		Quantity: 1,
+	}
+
+	// Checking actual values
+	orderExists := inventory.SearchOrder(order.OrderID)
+	inStock := inventory.GetInStock(order.Item)
+	log.Printf("Order %s exixts: %t\n", order.OrderID, orderExists)
+	log.Printf("Product %s stock: %d\n", order.Item, inStock)
+
+	// Execute workflow
+	workflowExec, err := temporalClient.ExecuteWorkflow(context.Background(), workflowOptions, workflows.InventoryWorkflow, order)
 	if err != nil {
 		log.Fatalln("Unable to execute workflow", err)
 	}
-
 	log.Println("Started workflow", "WorkflowID", workflowExec.GetID(), "RunID", workflowExec.GetRunID())
 
-	// Synchronously wait for the workflow completion.
-	var result string
-	err = workflowExec.Get(context.Background(), &result)
-	if err != nil {
-		log.Fatalln("Unable get workflow result", err)
+	// Wait for the workflow completion.
+	errWF := workflowExec.Get(context.Background(), nil)
+	if errWF != nil {
+		log.Fatalln("Unable get workflow result", errWF)
 	}
-	log.Println("Workflow result:", result)
+
+	// Get product stock
+	inStock = inventory.GetInStock(order.Item)
+	fmt.Printf("Product %s stock: %d\n", order.Item, inStock)
+
 }
