@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"go.temporal.io/sdk/client"
 )
@@ -30,8 +31,11 @@ func main() {
 	}
 	defer temporalClient.Close()
 
+	// Workflow options
+	id := uuid.New()
+
 	workflowOptions := client.StartWorkflowOptions{
-		ID:        "inventory-task-8",
+		ID:        id.String(),
 		TaskQueue: os.Getenv("TASKQUEUE"),
 	}
 
@@ -39,13 +43,11 @@ func main() {
 	order := inventory.Order{
 		OrderID:  "A12",
 		Item:     "123456",
-		Quantity: 1,
+		Quantity: 999,
 	}
 
 	// Checking actual values
-	orderExists := inventory.SearchOrder(order.OrderID)
-	inStock := inventory.GetInStock(order.Item)
-	log.Printf("Order %s exixts: %t\n", order.OrderID, orderExists)
+	inStock, err := inventory.GetInStock(order.Item)
 	log.Printf("Product %s stock: %d\n", order.Item, inStock)
 
 	// Execute workflow
@@ -62,7 +64,7 @@ func main() {
 	}
 
 	// Get product stock
-	inStock = inventory.GetInStock(order.Item)
+	inStock, err = inventory.GetInStock(order.Item)
 	fmt.Printf("Product %s stock: %d\n", order.Item, inStock)
 
 }

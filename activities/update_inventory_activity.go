@@ -2,7 +2,9 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"idempotence/inventory"
+	"idempotence/tools"
 
 	"go.temporal.io/sdk/activity"
 )
@@ -15,15 +17,26 @@ func UpdateInventoryActivity(ctx context.Context, order inventory.Order) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("UpdateInventoryActivity started")
 
-	// Check if order exists
+	// Idempotence: If order already processed, do nothing
 	orderExists := inventory.SearchOrder(order.OrderID)
 	if orderExists {
 		return nil
 	}
-	inStock := inventory.GetInStock(order.Item)
-	err := inventory.UpdateStock(order.OrderID, order.Item, inStock-order.Quantity)
+
+	inStock, err := inventory.GetInStock(order.Item)
 	if err != nil {
 		return err
+	}
+
+	if tools.IsError() {
+		return errors.New("RANDOM ERROR")
+	}
+	err = inventory.UpdateStock(order.OrderID, order.Item, inStock-order.Quantity)
+	if err != nil {
+		return err
+	}
+	if tools.IsError() {
+		return errors.New("RANDOM ERROR")
 	}
 	return nil
 }

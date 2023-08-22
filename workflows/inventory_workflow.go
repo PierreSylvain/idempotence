@@ -18,17 +18,19 @@ func InventoryWorkflow(ctx workflow.Context, order inventory.Order) error {
 		StartToCloseTimeout: 10 * time.Second,
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
-	err := workflow.ExecuteActivity(ctx, activities.CreateOrderActivity, order).Get(ctx, nil)
+
+	err := workflow.ExecuteActivity(ctx, activities.UpdateInventoryActivity, order).Get(ctx, nil)
 	if err != nil {
 		logger.Error("Activity failed.", "Error", err)
 		return err
 	}
 
-	err = workflow.ExecuteActivity(ctx, activities.UpdateInventoryActivity, order).Get(ctx, nil)
+	err = workflow.ExecuteActivity(ctx, activities.SupplierOrderActivity, order.Item, 1000).Get(ctx, nil)
 	if err != nil {
 		logger.Error("Activity failed.", "Error", err)
 		return err
 	}
+
 	logger.Info("InventoryWorkflow completed.")
 
 	return nil

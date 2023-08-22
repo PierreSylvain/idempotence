@@ -62,16 +62,16 @@ func SearchOrder(orderID string) bool {
 //
 // It takes a string parameter, productID, which represents the unique identifier of the product.
 // The function returns an integer value representing the quantity of the product that is currently in stock.
-func GetInStock(productID string) int {
+func GetInStock(productID string) (int, error) {
 	data, err := ReadJSON(os.Getenv("DATABASE"))
 	if err != nil {
 		fmt.Println("Error reading JSON:", err)
-		return 0
+		return 0, err
 	}
 	if data.ProductID == productID {
-		return data.InStock
+		return data.InStock, err
 	}
-	return 0
+	return 0, nil
 }
 
 // UpdateStock updates the stock of a product for a given order in the database.
@@ -113,5 +113,17 @@ func UpdateJSON(filename string, data Inventory) error {
 		return err
 	}
 
+	return nil
+}
+
+func SupplierOrder(quantity int) error {
+	data, err := ReadJSON(os.Getenv("DATABASE"))
+	if err != nil {
+		fmt.Println("Error reading JSON:", err)
+		return err
+	}
+	GetInStock(data.ProductID)
+	data.InStock = data.InStock + quantity
+	UpdateJSON(os.Getenv("DATABASE"), data)
 	return nil
 }

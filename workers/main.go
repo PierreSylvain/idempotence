@@ -38,8 +38,8 @@ func main() {
 	}
 	temporalWorker.RegisterWorkflowWithOptions(workflows.InventoryWorkflow, RegisterWFOptions)
 
-	temporalWorker.RegisterActivity(activities.CreateOrderActivity)
 	temporalWorker.RegisterActivity(activities.UpdateInventoryActivity)
+	temporalWorker.RegisterActivity(activities.SupplierOrderActivity)
 
 	// Start listening to the task queue.
 	err = temporalWorker.Run(worker.InterruptCh())
